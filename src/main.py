@@ -1,14 +1,20 @@
 import os
 import shutil
+import sys
 from blocks import markdown_to_html_node
 from textnode import TextNode, TextType
 
 content_dir_path = 'content/'
-public_dir_path = 'public/'
+public_dir_path = 'docs/'
 static_dir_path = 'static/'
 template_path = 'template.html'
 
 def main():
+
+    basepath = '/'
+
+    if len(sys.argv) == 2:
+        basepath = sys.argv[1]
 
     if os.path.exists(public_dir_path):
         shutil.rmtree(public_dir_path)
@@ -17,13 +23,7 @@ def main():
 
     copy_content(static_dir_path, public_dir_path)
 
-    generate_pages_recursive(content_dir_path, template_path, public_dir_path)
-
-    #generate_page('content/index.md', 'template.html', 'public/index.html')
-    #generate_page('content/blog/glorfindel/index.md', 'template.html', 'public/blog/glorfindel/index.html')
-    #generate_page('content/blog/tom/index.md', 'template.html', 'public/blog/tom/index.html')
-    #generate_page('content/blog/majesty/index.md', 'template.html', 'public/blog/majesty/index.html')
-    #generate_page('content/contact/index.md', 'template.html', 'public/contact/index.html')
+    generate_pages_recursive(content_dir_path, template_path, public_dir_path, basepath)
 
 #-----------------------------------------------------------------
 
@@ -50,7 +50,7 @@ def extract_title(markdown: str):
             return line[2:].strip()
     raise ValueError("Title not found")
 
-def generate_page(from_path: str, template_path: str, dest_path: str):
+def generate_page(from_path: str, template_path: str, dest_path: str, basepath: str):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     markdown = str()
@@ -68,6 +68,8 @@ def generate_page(from_path: str, template_path: str, dest_path: str):
 
     add_title = html_template.replace('{{ Title }}', title)
     complete_page = add_title.replace('{{ Content }}', html_string)
+    complete_page = complete_page.replace('href="/', f'href="{basepath}')
+    complete_page = complete_page.replace('src="/', f'src="{basepath}')
 
     #if not os.path.exists(dest_path):
     dest_dir_path = os.path.dirname(dest_path)
@@ -78,7 +80,7 @@ def generate_page(from_path: str, template_path: str, dest_path: str):
         f.write(complete_page)
 
 
-def generate_pages_recursive(dir_path_content: str, template_path: str, dest_dir_path: str):
+def generate_pages_recursive(dir_path_content: str, template_path: str, dest_dir_path: str, basepath: str):
 
     if os.path.exists(dir_path_content):
         dirs = os.listdir(dir_path_content)
@@ -86,11 +88,11 @@ def generate_pages_recursive(dir_path_content: str, template_path: str, dest_dir
             item_path = os.path.join(dir_path_content, item)
             if not os.path.isdir(item_path):
                 if item.endswith(".md"):
-                    generate_page(item_path, template_path, os.path.join(dest_dir_path, item.replace(".md", ".html")))
+                    generate_page(item_path, template_path, os.path.join(dest_dir_path, item.replace(".md", ".html")), basepath)
                 else:
                     continue
             else:
-                generate_pages_recursive(item_path, template_path, os.path.join(dest_dir_path, item))
+                generate_pages_recursive(item_path, template_path, os.path.join(dest_dir_path, item), basepath)
 
 
 main()
