@@ -35,36 +35,31 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: 
 def split_nodes_image(old_nodes: list[TextNode]) -> list[TextNode]:
 
     new_nodes = []
-
-    for node in old_nodes:
-        if node.text_type != TextType.PLAIN:
-            new_nodes.append(node)
+    for old_node in old_nodes:
+        if old_node.text_type != TextType.PLAIN:
+            new_nodes.append(old_node)
             continue
-
-        original_text = node.text
-        matches = extract_markdown_images(node.text)
-        nodes = []
-
-        for match in matches:
-
-            image_alt, image_url = match
-            sections = original_text.split(f"![{image_alt}]({image_url})", 1)
-
-            for i, section in enumerate(sections):
-                if section != "" and i % 2 == 0:
-                    new_node = TextNode(section, TextType.PLAIN)
-                    nodes.append(new_node)
-                else:
-                    new_node = TextNode(image_alt, TextType.IMAGE, image_url)
-                    nodes.append(new_node)
-                    original_text = section
-
+        original_text = old_node.text
+        images = extract_markdown_images(original_text)
+        if len(images) == 0:
+            new_nodes.append(old_node)
+            continue
+        for image in images:
+            sections = original_text.split(f"![{image[0]}]({image[1]})", 1)
+            if len(sections) != 2:
+                raise ValueError("invalid markdown, image section not closed")
+            if sections[0] != "":
+                new_nodes.append(TextNode(sections[0], TextType.PLAIN))
+            new_nodes.append(
+                TextNode(
+                    image[0],
+                    TextType.IMAGE,
+                    image[1],
+                )
+            )
+            original_text = sections[1]
         if original_text != "":
-            new_node = TextNode(original_text, TextType.PLAIN)
-            nodes.append(new_node)
-
-        new_nodes.extend(nodes)
-
+            new_nodes.append(TextNode(original_text, TextType.PLAIN))
     return new_nodes
 
 
@@ -73,35 +68,25 @@ def split_nodes_image(old_nodes: list[TextNode]) -> list[TextNode]:
 def split_nodes_link(old_nodes: list[TextNode]) -> list[TextNode]:
 
     new_nodes = []
-
-    for node in old_nodes:
-        if node.text_type != TextType.PLAIN:
-            new_nodes.append(node)
+    for old_node in old_nodes:
+        if old_node.text_type != TextType.PLAIN:
+            new_nodes.append(old_node)
             continue
-
-        original_text = node.text
-        matches = extract_markdown_links(node.text)
-        nodes = []
-
-        for match in matches:
-            link_alt, link_url = match
-            sections = original_text.split(f"[{link_alt}]({link_url})", 1)
-
-            for i, section in enumerate(sections):
-                if section != "" and i % 2 == 0:
-                    new_node = TextNode(section, TextType.PLAIN)
-                    nodes.append(new_node)
-                else:
-                    new_node = TextNode(link_alt, TextType.LINK, link_url)
-                    nodes.append(new_node)
-                    original_text = section
-
+        original_text = old_node.text
+        links = extract_markdown_links(original_text)
+        if len(links) == 0:
+            new_nodes.append(old_node)
+            continue
+        for link in links:
+            sections = original_text.split(f"[{link[0]}]({link[1]})", 1)
+            if len(sections) != 2:
+                raise ValueError("invalid markdown, link section not closed")
+            if sections[0] != "":
+                new_nodes.append(TextNode(sections[0], TextType.PLAIN))
+            new_nodes.append(TextNode(link[0], TextType.LINK, link[1]))
+            original_text = sections[1]
         if original_text != "":
-            new_node = TextNode(original_text, TextType.PLAIN)
-            nodes.append(new_node)
-
-        new_nodes.extend(nodes)
-
+            new_nodes.append(TextNode(original_text, TextType.PLAIN))
     return new_nodes
 
 def text_to_textnodes(text):
